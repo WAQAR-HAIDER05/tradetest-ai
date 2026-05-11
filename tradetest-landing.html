@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeTest AI — AI-Powered Trading Strategy Backtester</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00FF7F;
+    --green-dim: #00cc66;
+    --green-glow: rgba(0,255,127,0.15);
+    --black: #050a07;
+    --dark: #090f0b;
+    --card: #0d1610;
+    --border: rgba(0,255,127,0.15);
+    --text: #c8e8d0;
+    --muted: #5a7a62;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--green);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s ease;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid var(--green);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.15s ease;
+    opacity: 0.5;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,127,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,127,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,10,7,0.9);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-decoration: none;
+  }
+
+  .logo span { color: var(--text); }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--green); }
+
+  .nav-links { display: flex; gap: 40px; align-items: center; }
+
+  .nav-cta {
+    background: var(--green) !important;
+    color: var(--black) !important;
+    padding: 10px 24px;
+    font-weight: 700;
+    border-radius: 2px;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 60px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: var(--green);
+  }
+
+  .hero h1 {
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -2px;
+    color: #fff;
+    max-width: 900px;
+    margin-bottom: 32px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--green);
+    position: relative;
+  }
+
+  .hero p {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 56px;
+    font-weight: 400;
+  }
+
+  /* Waitlist form */
+  .waitlist-form {
+    display: flex;
+    gap: 12px;
+    max-width: 520px;
+    margin-bottom: 64px;
+  }
+
+  .waitlist-form input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: #fff;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 14px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .waitlist-form input::placeholder { color: var(--muted); }
+  .waitlist-form input:focus { border-color: var(--green); }
+
+  .btn-primary {
+    background: var(--green);
+    color: var(--black);
+    border: none;
+    padding: 16px 32px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(0,255,127,0.3);
+  }
+
+  .form-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: -48px;
+    margin-bottom: 64px;
+  }
+
+  .success-msg {
+    display: none;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--green);
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    background: var(--green-glow);
+    border-radius: 2px;
+    max-width: 520px;
+    margin-bottom: 32px;
+  }
+
+  /* Hero stats */
+  .hero-stats {
+    display: flex;
+    gap: 60px;
+    border-top: 1px solid var(--border);
+    padding-top: 48px;
+  }
+
+  .stat-item {}
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 32px;
+    color: var(--green);
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Floating terminal */
+  .hero-terminal {
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 420px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(0,255,127,0.05);
+  }
+
+  .terminal-header {
+    background: #0a1a0f;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .t-dot:nth-child(1) { background: #ff5f56; }
+  .t-dot:nth-child(2) { background: #ffbd2e; }
+  .t-dot:nth-child(3) { background: #27c93f; }
+  .t-title { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+
+  .terminal-body {
+    padding: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .t-prompt { color: var(--green); }
+  .t-input { color: #fff; }
+  .t-comment { color: var(--muted); }
+  .t-result { color: var(--green); }
+  .t-label { color: #7ecda0; }
+  .t-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  .t-line { display: flex; gap: 8px; margin-bottom: 4px; }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: var(--green);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* FEATURES */
+  .section {
+    padding: 120px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .section-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 500px;
+    line-height: 1.7;
+    margin-bottom: 72px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .feature-card {
+    background: var(--dark);
+    padding: 48px 40px;
+    transition: background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--green);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+
+  .feature-card:hover { background: var(--card); }
+  .feature-card:hover::before { transform: scaleX(1); }
+
+  .feature-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  .feature-icon {
+    font-size: 32px;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .feature-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: -0.3px;
+  }
+
+  .feature-card p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* HOW IT WORKS */
+  .how-section {
+    padding: 120px 60px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    margin-top: 72px;
+    position: relative;
+  }
+
+  .steps::before {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 16%;
+    right: 16%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+
+  .step {
+    padding: 0 40px;
+    text-align: center;
+    position: relative;
+  }
+
+  .step-num {
+    width: 64px;
+    height: 64px;
+    background: var(--black);
+    border: 1px solid var(--green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--green);
+    font-weight: 700;
+    margin: 0 auto 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .step h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+
+  .step p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* COMPETITORS */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 56px;
+  }
+
+  .comp-table th {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comp-table td {
+    padding: 20px;
+    font-size: 14px;
+    color: var(--text);
+    border-bottom: 1px solid rgba(0,255,127,0.05);
+  }
+
+  .comp-table tr.highlight td {
+    background: rgba(0,255,127,0.04);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .comp-table tr.highlight td:first-child {
+    color: var(--green);
+    border-left: 2px solid var(--green);
+  }
+
+  .check { color: var(--green); font-size: 16px; }
+  .cross { color: #ff4444; font-size: 16px; }
+  .partial { color: #ffaa00; font-size: 16px; }
+
+  /* CTA SECTION */
+  .cta-section {
+    padding: 120px 60px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,255,127,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-section h2 {
+    font-size: clamp(36px, 5vw, 72px);
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    margin-bottom: 24px;
+  }
+
+  .cta-section p {
+    font-size: 18px;
+    color: var(--muted);
+    margin-bottom: 48px;
+  }
+
+  .cta-form {
+    display: flex;
+    gap: 12px;
+    max-width: 480px;
+    margin: 0 auto 16px;
+  }
+
+  .cta-form input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: #fff;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 14px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.2s;
+    cursor: none;
+  }
+  .cta-form input::placeholder { color: var(--muted); }
+  .cta-form input:focus { border-color: var(--green); }
+
+  .cta-success {
+    display: none;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--green);
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    background: var(--green-glow);
+    border-radius: 2px;
+    max-width: 480px;
+    margin: 0 auto 16px;
+  }
+
+  .cta-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 60px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  footer p {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .footer-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .footer-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:0.5;transform:scale(1.3)}
+  }
+
+  /* Animations */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeUp 0.8s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.35s; }
+  .delay-4 { animation-delay: 0.5s; }
+  .delay-5 { animation-delay: 0.65s; }
+
+  @media (max-width: 1024px) {
+    .hero-terminal { display: none; }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: 1fr; gap: 40px; }
+    .steps::before { display: none; }
+    nav { padding: 20px 24px; }
+    .nav-links { gap: 20px; }
+    .hero, .section, .how-section, .cta-section { padding-left: 24px; padding-right: 24px; }
+    footer { padding: 32px 24px; flex-direction: column; gap: 16px; text-align: center; }
+  }
+
+  @media (max-width: 640px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .hero-stats { flex-direction: column; gap: 32px; }
+    .waitlist-form, .cta-form { flex-direction: column; }
+    .nav-links { display: none; }
+    .comp-table { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">TradeTest<span>.AI</span></a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How It Works</a>
+    <a href="#compare">Compare</a>
+    <a href="#waitlist" class="nav-cta">Join Waitlist</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag fade-up">AI-Powered Trading Tool · Pre-Seed Stage</div>
+
+  <h1 class="fade-up delay-1">
+    Test Your<br>
+    Trading Strategy<br>
+    <em>Without Coding.</em>
+  </h1>
+
+  <p class="fade-up delay-2">
+    Describe your forex strategy in plain English. TradeTest AI backtests it against years of real market data and delivers results in under 60 seconds.
+  </p>
+
+  <div class="waitlist-form fade-up delay-3" id="heroForm">
+    <input type="email" id="heroEmail" placeholder="your@email.com" />
+    <button class="btn-primary" onclick="submitForm('heroEmail','heroSuccess','heroForm')">
+      Get Early Access →
+    </button>
+  </div>
+
+  <div class="success-msg" id="heroSuccess">
+    ✓ You're on the list! We'll notify you at launch.
+  </div>
+
+  <p class="form-note fade-up delay-3">🔒 No spam. Unsubscribe anytime. Early users get 3 months free.</p>
+
+  <div class="hero-stats fade-up delay-4">
+    <div class="stat-item">
+      <div class="stat-num">180M+</div>
+      <div class="stat-label">Retail Traders Globally</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">&lt;60s</div>
+      <div class="stat-label">Backtest Results</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">0</div>
+      <div class="stat-label">Lines of Code Required</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">$29/mo</div>
+      <div class="stat-label">Pro Plan Pricing</div>
+    </div>
+  </div>
+
+  <!-- Terminal -->
+  <div class="hero-terminal fade-up delay-5">
+    <div class="terminal-header">
+      <div class="t-dot"></div>
+      <div class="t-dot"></div>
+      <div class="t-dot"></div>
+      <span class="t-title">tradetest.ai — live demo</span>
+    </div>
+    <div class="terminal-body">
+      <div class="t-line">
+        <span class="t-prompt">→</span>
+        <span class="t-input">Strategy: "Buy when 20 EMA crosses above 50 EMA on H1. SL 20 pips, TP 40 pips."</span>
+      </div>
+      <div class="t-line">
+        <span class="t-comment">// Pair: EURUSD · Range: Jan 2022 – Dec 2024</span>
+      </div>
+      <hr class="t-divider">
+      <div class="t-line">
+        <span class="t-label">Win Rate</span>
+        <span class="t-result" style="margin-left:auto">62.4%</span>
+      </div>
+      <div class="t-line">
+        <span class="t-label">Total Trades</span>
+        <span class="t-result" style="margin-left:auto">347</span>
+      </div>
+      <div class="t-line">
+        <span class="t-label">Profit Factor</span>
+        <span class="t-result" style="margin-left:auto">1.84</span>
+      </div>
+      <div class="t-line">
+        <span class="t-label">Max Drawdown</span>
+        <span class="t-result" style="margin-left:auto">12.3%</span>
+      </div>
+      <div class="t-line">
+        <span class="t-label">Best Session</span>
+        <span class="t-result" style="margin-left:auto">London 🏆</span>
+      </div>
+      <hr class="t-divider">
+      <div class="t-line">
+        <span class="t-prompt">→</span>
+        <span class="t-input">Simulating $1,000 account @ 1% risk...</span>
+        <span class="cursor-blink"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-tag">What We Build</div>
+  <h2 class="section-title">Everything a Trader Needs.<br>Zero Technical Skills.</h2>
+  <p class="section-sub">From strategy idea to verified backtest data — in under a minute.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-num">01</div>
+      <span class="feature-icon">💬</span>
+      <h3>Plain Language Input</h3>
+      <p>Type your strategy in English or Urdu. AI understands EMAs, RSI, MACD, breakouts, and more — no code needed.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">02</div>
+      <span class="feature-icon">⚡</span>
+      <h3>Instant AI Backtesting</h3>
+      <p>Runs your strategy against 1–3 years of real market data across major forex pairs and gold. Results in under 60 seconds.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">03</div>
+      <span class="feature-icon">📊</span>
+      <h3>Full Results Dashboard</h3>
+      <p>Win rate, profit factor, max drawdown, monthly breakdown, and London/NY/Tokyo session performance analysis.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">04</div>
+      <span class="feature-icon">💰</span>
+      <h3>Risk Simulator</h3>
+      <p>Enter your account size and risk %. See exactly how much you'd have made or lost — in real dollars — trade by trade.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">05</div>
+      <span class="feature-icon">🏦</span>
+      <h3>Prop Firm Mode</h3>
+      <p>Test strategies against FTMO, MyForexFunds, and other funded account rules. Know if your strategy passes before you pay.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">06</div>
+      <span class="feature-icon">🤖</span>
+      <h3>AI Improvement Tips</h3>
+      <p>Not happy with results? AI suggests specific adjustments to your entry, exit, or risk parameters to improve performance.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-tag">The Process</div>
+  <h2 class="section-title">Three Steps to Verified Results</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Describe Your Strategy</h3>
+      <p>Type your trading rules in plain language. Select currency pair, timeframe (M1–Daily), and date range.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>AI Runs the Test</h3>
+      <p>Our engine scans years of tick data, identifies every valid entry, and simulates each trade outcome automatically.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Get Actionable Data</h3>
+      <p>View your complete results dashboard. Simulate your account. Export to Excel. Know if your strategy actually works.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPETITOR COMPARISON -->
+<section class="section" id="compare">
+  <div class="section-tag">Market Position</div>
+  <h2 class="section-title">Nobody Else Does This.</h2>
+  <p class="section-sub">Every competitor requires coding knowledge, manual clicking, or a live funded account.</p>
+
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>Platform</th>
+        <th>AI Prompt</th>
+        <th>Auto Backtest</th>
+        <th>Session Stats</th>
+        <th>Risk Sim</th>
+        <th>Beginner Friendly</th>
+        <th>Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="highlight">
+        <td>TradeTest AI</td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td><span class="check">✓</span></td>
+        <td>$29/mo</td>
+      </tr>
+      <tr>
+        <td>TradingView</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="partial">~</span></td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="cross">✗</span></td>
+        <td>$30/mo</td>
+      </tr>
+      <tr>
+        <td>MT4/MT5 Tester</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="partial">~</span></td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="partial">~</span></td>
+        <td><span class="cross">✗</span></td>
+        <td>Free</td>
+      </tr>
+      <tr>
+        <td>Forex Tester 5</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="partial">~</span></td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="check">✓</span></td>
+        <td><span class="cross">✗</span></td>
+        <td>$229 one-time</td>
+      </tr>
+      <tr>
+        <td>QuantConnect</td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="check">✓</span></td>
+        <td><span class="cross">✗</span></td>
+        <td><span class="check">✓</span></td>
+        <td><span class="cross">✗</span></td>
+        <td>$8–20/mo</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="waitlist">
+  <h2>Ready to Test<br>Your Strategy?</h2>
+  <p>Join the waitlist. Early users get 3 months of Pro — free.</p>
+
+  <div class="cta-form" id="ctaForm">
+    <input type="email" id="ctaEmail" placeholder="your@email.com" />
+    <button class="btn-primary" onclick="submitForm('ctaEmail','ctaSuccess','ctaForm')">
+      Join Waitlist →
+    </button>
+  </div>
+
+  <div class="cta-success" id="ctaSuccess">
+    ✓ You're on the list! We'll be in touch before launch.
+  </div>
+
+  <p class="cta-note">🔒 No spam. No credit card. Early access only.</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="logo">TradeTest<span>.AI</span></a>
+  <p>© 2026 TradeTest AI · Islamabad, Pakistan · Pre-Seed Stage</p>
+  <div class="footer-tag">
+    <div class="footer-dot"></div>
+    Actively Seeking Seed Investment
+  </div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = (mx - 6) + 'px';
+    cursor.style.top = (my - 6) + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx - 18) * 0.15;
+    ry += (my - ry - 18) * 0.15;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('button, a, input').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.transform = 'scale(2)';
+      ring.style.transform = 'scale(1.5)';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.transform = 'scale(1)';
+      ring.style.transform = 'scale(1)';
+    });
+  });
+
+  // Waitlist form
+  function submitForm(inputId, successId, formId) {
+    const email = document.getElementById(inputId).value;
+    if (!email || !email.includes('@')) {
+      document.getElementById(inputId).style.borderColor = '#ff4444';
+      return;
+    }
+    document.getElementById(formId).style.display = 'none';
+    const s = document.getElementById(successId);
+    s.style.display = 'block';
+    s.textContent = '✓ ' + email + ' added to waitlist! We\'ll notify you at launch.';
+
+    // Store locally
+    const list = JSON.parse(localStorage.getItem('waitlist') || '[]');
+    list.push({ email, time: new Date().toISOString() });
+    localStorage.setItem('waitlist', JSON.stringify(list));
+  }
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>
